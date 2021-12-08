@@ -1,0 +1,37 @@
+$userToken = $null
+$SafeguardSession =  $null
+
+$userName = "sppser600" #Edit me
+$password = "StormwindOrgrimmar1" #Edit me
+$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+
+$ip = "172.30.167.20"
+
+$data = Import-Csv "C:\PAM\scripts\Firewall_test_Scripts\Firewall test SPP\test_firewall_SPP.csv" -Header "destinations", "port"
+
+function myConnectSPP($ip)
+{       
+    Connect-Safeguard $ip local -Username $userName -Password $securePassword
+    $userToken = $SafeguardSession.AccessToken          
+    return $userToken
+}
+
+function Test-Firewall($ip,$token)
+{           
+    foreach($line in $data)
+    {
+        $feedback = Invoke-SafeguardTelnet -Appliance $ip -AccessToken $token -NetworkAddress $line.destinations -Port $line.port
+        if ($feedback -match "Failed"){write-host $feedback -ForegroundColor Red -BackgroundColor White}
+        else{Write-Host $feedback} 
+    }   
+}
+
+$SPParray = @("172.30.167.20", "172.30.167.141", "172.30.167.142")
+
+
+foreach($SPP in $SPParray)
+{
+    write-host "*********************** Testing ports from SPP $SPP *******************************"
+    $userToken = myConnectSPP $SPP
+    Test-Firewall $SPP
+}
